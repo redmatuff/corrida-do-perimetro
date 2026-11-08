@@ -1,0 +1,345 @@
+<!doctype html>
+<html class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corrida do Perímetro</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Fredoka', sans-serif; }
+    @keyframes pop { 0%{transform:scale(0.8);opacity:0} 100%{transform:scale(1);opacity:1} }
+    .pop-in { animation: pop 0.3s ease-out; }
+    .side-badge { background: rgba(239, 68, 68, 0.9); color: #fef2f2; padding: 6px 10px; border-radius: 8px; font-weight: bold; font-size: 13px; }
+    
+    @keyframes runner-bounce { 
+      0%, 100% { transform: translateY(0) rotate(0deg); } 
+      50% { transform: translateY(-4px) rotate(3deg); } 
+    }
+    .mascot-running { animation: runner-bounce 0.25s infinite ease-in-out; }
+  </style>
+ </head>
+ <body class="h-full overflow-auto bg-gradient-to-br from-emerald-900 via-teal-800 to-cyan-900 text-white">
+  <div id="app" class="h-full w-full flex flex-col items-center justify-center p-4">
+   
+   <!-- Tela Inicial -->
+   <div id="screen-start" class="text-center pop-in flex flex-col items-center">
+    <div class="mb-4">
+     <img id="start-mascot" class="w-28 h-28 object-contain drop-shadow-xl" alt="Mascote">
+    </div>
+    <h1 id="title" class="text-4xl md:text-5xl font-bold mb-2 text-yellow-300 drop-shadow-lg">Corrida do Perímetro</h1>
+    <p class="text-lg text-emerald-200 mb-8">Calcule o perímetro das figuras e ajude o mascote a vencer!</p>
+    
+    <!-- Botões dos Níveis -->
+    <div class="flex flex-col gap-3 mb-4 w-full max-w-xs">
+     <button onclick="startGame(1)" class="bg-emerald-500 hover:bg-emerald-400 text-white font-bold text-lg px-8 py-3 rounded-2xl shadow-lg transition-transform hover:scale-105 flex items-center justify-center"> 
+      ⚡ Nível 1 - Fácil 
+     </button> 
+     <button onclick="startGame(2)" class="bg-orange-500 hover:bg-orange-400 text-white font-bold text-lg px-8 py-3 rounded-2xl shadow-lg transition-transform hover:scale-105 flex items-center justify-center"> 
+      🔥 Nível 2 - Desafio 
+     </button>
+    </div>
+   </div>
+
+   <!-- Tela do Jogo -->
+   <div id="screen-game" class="hidden w-full max-w-3xl flex flex-col gap-4">
+    <!-- HUD -->
+    <div class="flex justify-between items-center">
+     <div class="bg-white/10 backdrop-blur rounded-xl px-4 py-2">
+      <span class="text-emerald-300 text-sm">Pergunta</span> <span id="hud-question" class="font-bold ml-1">1/8</span>
+     </div>
+     <div class="bg-white/10 backdrop-blur rounded-xl px-4 py-2">
+      <span class="text-emerald-300 text-sm">Pontos</span> <span id="hud-score" class="font-bold ml-1">0</span>
+     </div>
+    </div>
+
+    <!-- Figura com Mascote e Animação -->
+    <div class="bg-white/10 backdrop-blur rounded-2xl p-6 flex flex-col items-center gap-4">
+     <p class="text-emerald-200 text-sm">Veja o mascote contornar a figura com a corda!</p>
+     <div class="relative">
+      <svg id="shape-svg" width="280" height="220" class="drop-shadow" viewBox="0 0 280 220"></svg>
+      <svg id="rope-svg" width="280" height="220" class="absolute top-0 left-0" viewBox="0 0 280 220" style="pointer-events: none;"></svg>
+      
+      <!-- Contêiner do Mascote -->
+      <div id="runner-char" class="absolute pointer-events-none z-10 w-12 h-12 flex items-center justify-center" style="left: 140px; top: 110px;">
+       <img id="game-mascot" class="w-12 h-12 object-contain drop-shadow-md mascot-running" alt="Mascote Correndo">
+      </div>
+      
+      <div id="sides-display" class="absolute top-2 right-2 flex flex-col gap-1"></div>
+     </div>
+     <p id="shape-info" class="text-yellow-300 font-medium text-center"></p>
+     <div id="perimeter-display" class="text-2xl font-bold text-emerald-200 text-center hidden">
+      <span class="text-yellow-300">Perímetro calculado!</span> ✓
+     </div>
+    </div>
+
+    <!-- Opções de Resposta -->
+    <div id="answer-section" class="hidden flex flex-col gap-3">
+     <p class="text-emerald-200 text-center">Qual é o perímetro total?</p>
+     <div id="options" class="grid grid-cols-2 gap-3"></div>
+    </div>
+
+    <!-- Feedback -->
+    <div id="feedback" class="hidden text-center py-2 rounded-xl font-bold text-lg pop-in"></div>
+   </div>
+
+   <!-- Tela Final -->
+   <div id="screen-end" class="hidden text-center pop-in flex flex-col items-center">
+    <div class="mb-2">
+     <img id="end-mascot" class="w-28 h-28 object-contain drop-shadow-xl" alt="Mascote">
+    </div>
+    <div class="text-5xl mb-2" id="end-emoji">🏆</div>
+    <h2 class="text-3xl font-bold text-yellow-300 mb-2" id="end-title">Parabéns!</h2>
+    <p class="text-xl text-emerald-200 mb-2">Sua pontuação:</p>
+    <p class="text-5xl font-bold text-white mb-6" id="end-score">0/8</p>
+    <button onclick="startGame(1)" class="bg-yellow-400 hover:bg-yellow-300 text-emerald-900 font-bold text-xl px-8 py-4 rounded-2xl shadow-lg transition-transform hover:scale-105"> Jogar Novamente </button>
+   </div>
+  </div>
+
+  <script>
+  // Insira o link da imagem do seu mascote abaixo se quiser substituir o padrão:
+  var MASCOT_URL = 'mascoteAnd.png';
+
+  function applyMascotImage() {
+    const ids = ['start-mascot', 'game-mascot', 'end-mascot'];
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && MASCOT_URL) el.src = MASCOT_URL;
+    });
+  }
+
+  // Proteção de inicialização do SDK para evitar travar o código
+  if (window.elementSdk && typeof window.elementSdk.init === 'function') {
+    window.elementSdk.init({
+      defaultConfig: { game_title: 'Corrida do Perímetro' }
+    });
+  }
+
+  // Estado do Jogo
+  let currentQ = 0, score = 0, questions = [], totalQ = 8, isAnimating = false, currentLevel = 1;
+
+  function generateQuestions() {
+    const qs = [];
+    const shapes = [
+      () => { const l=rand(4,10),w=rand(3,8); return { type:'rect', sides:[l,w,l,w], label:`Retângulo: ${l} cm × ${w} cm` }; },
+      () => { const s=rand(4,12); return { type:'square', sides:[s,s,s,s], label:`Quadrado: lado = ${s} cm` }; },
+      () => { const a=rand(4,10),b=rand(4,10),c=rand(4,10); return { type:'triangle', sides:[a,b,c], label:`Triângulo: ${a} cm, ${b} cm, ${c} cm` }; },
+      () => { const a=rand(5,12),b=rand(3,8); return { type:'parallelogram', sides:[a,b,a,b], label:`Paralelogramo: ${a} cm e ${b} cm` }; }
+    ];
+    for (let i=0;i<totalQ;i++) { qs.push(shapes[i%shapes.length]()); }
+    return qs.sort(()=>Math.random()-0.5);
+  }
+
+  function rand(min,max) { return Math.floor(Math.random()*(max-min+1))+min; }
+
+  // Função para iniciar o jogo (registrada globalmente)
+  window.startGame = function(level = 1) {
+    currentLevel = level;
+    currentQ = 0; 
+    score = 0; 
+    questions = generateQuestions();
+    show('screen-game'); 
+    hide('screen-start'); 
+    hide('screen-end');
+    showQuestion();
+  };
+
+  function showQuestion() {
+    const q = questions[currentQ];
+    document.getElementById('hud-question').textContent = `${currentQ+1}/${totalQ}`;
+    document.getElementById('hud-score').textContent = score;
+    document.getElementById('shape-info').textContent = q.label;
+    hide('answer-section');
+    document.getElementById('feedback').classList.add('hidden');
+    drawShape(q);
+    animateRope(q);
+  }
+
+  function drawShape(q) {
+    const svg = document.getElementById('shape-svg');
+    let pathData = '';
+    
+    if (q.type === 'rect') {
+      const [w, h] = [q.sides[0] * 15, q.sides[1] * 15];
+      const x = (280 - w) / 2, y = (220 - h) / 2;
+      pathData = `M ${x} ${y} L ${x+w} ${y} L ${x+w} ${y+h} L ${x} ${y+h} Z`;
+    } else if (q.type === 'square') {
+      const s = q.sides[0] * 15;
+      const x = (280 - s) / 2, y = (220 - s) / 2;
+      pathData = `M ${x} ${y} L ${x+s} ${y} L ${x+s} ${y+s} L ${x} ${y+s} Z`;
+    } else if (q.type === 'triangle') {
+      pathData = `M 140 40 L 80 170 L 200 170 Z`;
+    } else if (q.type === 'parallelogram') {
+      const [a, b] = [q.sides[0] * 15, q.sides[1] * 15];
+      const x = (280 - a) / 2, y = (220 - b) / 2, offset = 20;
+      pathData = `M ${x+offset} ${y} L ${x+a} ${y} L ${x+a-offset} ${y+b} L ${x} ${y+b} Z`;
+    }
+    
+    svg.innerHTML = `<path d="${pathData}" fill="none" stroke="#fbbf24" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`;
+  }
+
+  function animateRope(q) {
+    isAnimating = true;
+    const ropeSvg = document.getElementById('rope-svg');
+    const runnerChar = document.getElementById('runner-char');
+    const sidesDisplay = document.getElementById('sides-display');
+    const perimeterDisplay = document.getElementById('perimeter-display');
+    
+    ropeSvg.innerHTML = '';
+    sidesDisplay.innerHTML = '';
+    perimeterDisplay.classList.add('hidden');
+    
+    let pathData = '';
+    let points = [];
+    
+    if (q.type === 'rect') {
+      const [w, h] = [q.sides[0] * 15, q.sides[1] * 15];
+      const x = (280 - w) / 2, y = (220 - h) / 2;
+      points = [
+        { x, y }, { x: x+w, y }, { x: x+w, y: y+h }, { x, y: y+h }, { x, y }
+      ];
+    } else if (q.type === 'square') {
+      const s = q.sides[0] * 15;
+      const x = (280 - s) / 2, y = (220 - s) / 2;
+      points = [
+        { x, y }, { x: x+s, y }, { x: x+s, y: y+s }, { x, y: y+s }, { x, y }
+      ];
+    } else if (q.type === 'triangle') {
+      points = [
+        { x: 140, y: 40 }, { x: 80, y: 170 }, { x: 200, y: 170 }, { x: 140, y: 40 }
+      ];
+    } else if (q.type === 'parallelogram') {
+      const [a, b] = [q.sides[0] * 15, q.sides[1] * 15];
+      const x = (280 - a) / 2, y = (220 - b) / 2, offset = 20;
+      points = [
+        { x: x+offset, y }, { x: x+a, y }, { x: x+a-offset, y: y+b }, { x, y: y+b }, { x: x+offset, y }
+      ];
+    }
+    
+    points.forEach((pt, idx) => {
+      if (idx === 0) pathData = `M ${pt.x} ${pt.y}`;
+      else pathData += ` L ${pt.x} ${pt.y}`;
+    });
+    
+    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathEl.setAttribute('d', pathData);
+    pathEl.setAttribute('stroke', '#ef4444');
+    pathEl.setAttribute('stroke-width', '4');
+    pathEl.setAttribute('fill', 'none');
+    pathEl.setAttribute('stroke-linecap', 'round');
+    pathEl.setAttribute('stroke-linejoin', 'round');
+    
+    ropeSvg.appendChild(pathEl);
+    
+    const totalPathLength = pathEl.getTotalLength ? pathEl.getTotalLength() : 500;
+    
+    pathEl.style.strokeDasharray = totalPathLength;
+    pathEl.style.strokeDashoffset = totalPathLength;
+    
+    if (pathEl.animate) {
+      pathEl.animate(
+        [{ strokeDashoffset: totalPathLength }, { strokeDashoffset: 0 }],
+        { duration: 1200, easing: 'linear' }
+      );
+    }
+    
+    const animationDuration = 1200;
+    const startTime = Date.now();
+    
+    function moveRunnerAlongPath() {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / animationDuration, 1);
+      
+      const targetLength = progress * totalPathLength;
+      const point = pathEl.getPointAtLength ? pathEl.getPointAtLength(targetLength) : { x: 140, y: 110 };
+      
+      runnerChar.style.left = (point.x - 24) + 'px';
+      runnerChar.style.top = (point.y - 24) + 'px';
+      
+      if (progress < 1) {
+        requestAnimationFrame(moveRunnerAlongPath);
+      }
+    }
+    
+    moveRunnerAlongPath();
+    
+    const segmentTiming = animationDuration / (points.length - 1);
+    
+    points.slice(0, -1).forEach((pt, idx) => {
+      const delay = Math.max(0, (idx + 0.5) * segmentTiming);
+      
+      setTimeout(() => {
+        const sideLength = q.sides[idx];
+        const badge = document.createElement('div');
+        badge.className = 'side-badge pop-in';
+        badge.textContent = `Lado ${idx + 1}: ${sideLength} cm`;
+        sidesDisplay.appendChild(badge);
+      }, delay);
+    });
+    
+    setTimeout(() => {
+      pathEl.style.strokeDasharray = 'none';
+      pathEl.style.strokeDashoffset = '0';
+      
+      if (currentLevel === 1) {
+        perimeterDisplay.classList.remove('hidden');
+      }
+      
+      renderOptions(q.sides.reduce((a,b)=>a+b,0));
+      show('answer-section');
+      isAnimating = false;
+    }, 1300);
+  }
+
+  function renderOptions(answer) {
+    const opts = [answer];
+    while(opts.length<4) { const fake=answer+rand(-6,6); if(fake>0&&!opts.includes(fake)) opts.push(fake); }
+    opts.sort(()=>Math.random()-0.5);
+    const container = document.getElementById('options');
+    container.innerHTML = opts.map(o=>`<button onclick="checkAnswer(${o},${answer})" class="bg-white/15 hover:bg-white/25 border-2 border-white/20 rounded-xl py-3 text-lg font-bold transition-all hover:scale-105">${o} cm</button>`).join('');
+  }
+
+  window.checkAnswer = function(selected, correct) {
+    const fb = document.getElementById('feedback');
+    fb.classList.remove('hidden');
+    const btns = document.querySelectorAll('#options button');
+    btns.forEach(b=>b.disabled=true);
+
+    if (selected===correct) {
+      score++;
+      fb.textContent='✅ Correto! Excelente!';
+      fb.className='text-center py-2 rounded-xl font-bold text-lg pop-in bg-emerald-500/30 text-emerald-200';
+    } else {
+      fb.textContent=`❌ Resposta correta: ${correct} cm`;
+      fb.className='text-center py-2 rounded-xl font-bold text-lg pop-in bg-red-500/30 text-red-200';
+    }
+    
+    setTimeout(()=>{
+      currentQ++;
+      if(currentQ>=totalQ) endGame();
+      else showQuestion();
+    },1500);
+  };
+
+  function endGame() {
+    hide('screen-game'); 
+    show('screen-end');
+    document.getElementById('end-score').textContent=`${score}/${totalQ}`;
+    const ratio=score/totalQ;
+    const levelText = currentLevel === 1 ? ' (Nível 1)' : ' (Nível 2)';
+    document.getElementById('end-emoji').textContent = ratio>=0.8?'🏆':ratio>=0.5?'⭐':'💪';
+    document.getElementById('end-title').textContent = (ratio>=0.8?'Campeão!':ratio>=0.5?'Bom trabalho!':'Continue praticando!') + levelText;
+  }
+
+  function show(id){document.getElementById(id).classList.remove('hidden');}
+  function hide(id){document.getElementById(id).classList.add('hidden');}
+
+  // Executa o carregamento do mascote e ícones
+  applyMascotImage();
+  if (typeof lucide !== 'undefined' && lucide.createIcons) {
+    lucide.createIcons();
+  }
+</script>
+ </body>
+</html>
